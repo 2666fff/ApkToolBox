@@ -78,7 +78,7 @@
 
         public static string GetSignArg(string apkName)
         {
-            return string.Format("-jar " + Constants.ApkSigner + " sign --ks " + Constants.KeyStore + "  --ks-key-alias artw --ks-pass pass:232425 --key-pass pass:232425 " + apkName);
+            return string.Format("-jar " + Constants.ApkSigner + " sign --v4-signing-enabled true --ks " + Constants.KeyStore + "  --ks-key-alias artw --ks-pass pass:232425 --key-pass pass:232425 " + apkName);
         }
     }
 }

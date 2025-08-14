@@ -1,0 +1,4 @@
+path=D:\nixiang\ApktoolBox_1.4\tool\keystore
+alis=yeapk
+password=yeapk1234
+alispass=yeapk1234
