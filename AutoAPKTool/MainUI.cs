@@ -6,7 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using AutoAPKTool.Properties;
-using Ionic.Zip;
+// using Ionic.Zip;
 
 namespace AutoAPKTool
 {
