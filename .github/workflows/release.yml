@@ -1,0 +1,55 @@
+name: Build and Release on Tag
+
+on:
+  push:
+    tags:
+      - 'v*'  # 匹配 v 开头的标签，如 v1.0.0、v2.3.1 等
+
+jobs:
+  build:
+    runs-on: windows-latest  # 由于项目是 .NET Framework 4.0 应用，使用 Windows 环境
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET Framework
+        uses: microsoft/setup-dotnet@v4
+        with:
+          dotnet-version: '4.0.x'  # 匹配项目使用的 .NET Framework 版本
+
+      - name: Restore NuGet packages
+        working-directory: ./ApkToolBox/AutoAPKTool
+        run: nuget restore
+
+      - name: Build project
+        working-directory: ./ApkToolBox/AutoAPKTool
+        run: |
+          msbuild AutoAPKTool.csproj /p:Configuration=Release /p:Platform="Any CPU" /p:OutputPath=../bin/Release
+
+      - name: Prepare release artifacts
+        run: |
+          # 创建发布目录
+          New-Item -Path ./release -ItemType Directory
+          # 复制编译输出文件
+          Copy-Item -Path ./ApkToolBox/bin/Release/* -Destination ./release -Recurse
+          # 复制工具目录（包含 jadx、dex2jar 等）
+          Copy-Item -Path ./ApkToolBox/tool -Destination ./release/tool -Recurse
+          # 压缩为 zip 包
+          Compress-Archive -Path ./release/* -DestinationPath ./ApkToolBox-${{ github.ref_name }}.zip
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ./ApkToolBox-${{ github.ref_name }}.zip
+          name: Release ${{ github.ref_name }}
+          body: |
+            ## 更新内容
+            - 自动发布版本 ${{ github.ref_name }}
+            - 基于 tag 自动编译构建
+            
+            ## 注意事项
+            - 尽量避免使用中文路径，以免编译或签名失败
+            - 签名工具来自网易，签名速度比一般签名快50%~80%
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
