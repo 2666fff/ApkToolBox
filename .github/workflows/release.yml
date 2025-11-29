@@ -1,9 +1,15 @@
-name: Build and Release on Tag
+name: Build on Every Commit
 
+# 触发条件：所有分支的push提交（移除tag限制）
 on:
   push:
+    branches:
+      - '*'  # 匹配所有分支
     tags:
-      - 'v*'
+      - '*'  # 兼容tag提交也触发（可选，如需仅分支提交可删除此行）
+  pull_request:
+    branches:
+      - '*'  # PR提交也触发编译（可选，按需保留）
 
 jobs:
   build:
@@ -15,47 +21,57 @@ jobs:
 
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
+        with:
+          # 显式指定MSBuild版本（适配.NET Framework 4.8.1）
+          msbuild-architecture: x64
 
       - name: Setup NuGet
         uses: NuGet/setup-nuget@v2
+        with:
+          nuget-version: 'latest'
 
       - name: Restore NuGet packages
-        run: nuget restore AutoAPKTool/AutoAPKTool.csproj  # 直接指定项目文件路径，避免工作目录问题
-
-      - name: Build project
-        run: msbuild AutoAPKTool/AutoAPKTool.csproj /p:Configuration=Release /p:Platform="Any CPU" /p:OutputPath=../../bin/Release
-
-      - name: Prepare release artifacts
         run: |
-          # 创建发布目录
-          New-Item -Path ./release -ItemType Directory -Force
-          
-          # 复制编译输出文件（修正路径）
-          Copy-Item -Path ./bin/Release/* -Destination ./release -Recurse
-          
-          # 复制工具目录（处理可能的重复路径）
-          if (Test-Path ./AutoAPKTool/tool) {
-              Copy-Item -Path ./AutoAPKTool/tool -Destination ./release/tool -Recurse -Force
-          }
-          if (Test-Path ./tool) {
-              Copy-Item -Path ./tool -Destination ./release/tool -Recurse -Force
-          }
-          
-          # 压缩为 zip 包
-          Compress-Archive -Path ./release/* -DestinationPath ./ApkToolBox-${{ github.ref_name }}.zip -Force
+          # 显式指定NuGet还原目标框架为4.8.1
+          nuget restore AutoAPKTool/AutoAPKTool.csproj -Framework net481
+        working-directory: ${{ github.workspace }}
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: ./ApkToolBox-${{ github.ref_name }}.zip
-          name: Release ${{ github.ref_name }}
-          body: |
-            ## 更新内容
-            - 自动发布版本 ${{ github.ref_name }}
-            - 基于 tag 自动编译构建
-            
-            ## 注意事项
-            - 尽量避免使用中文路径，以免编译或签名失败
-            - 签名工具来自网易，签名速度比一般签名快50%~80%
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build project (.NET Framework 4.8.1)
+        run: |
+          msbuild AutoAPKTool/AutoAPKTool.csproj `
+            /p:Configuration=Release `
+            /p:Platform="Any CPU" `
+            /p:OutputPath=../../bin/Release `
+            /p:TargetFrameworkVersion=v4.8.1 `  # 强制指定目标框架
+            /p:TargetFrameworkProfile="" `
+            /p:UseLatestPlatformToolset=true  # 使用最新工具集兼容4.8.1
+        working-directory: ${{ github.workspace }}
+
+      - name: Verify build output
+        run: |
+          # 检查编译产物是否生成
+          if (-not (Test-Path ./bin/Release/AutoAPKTool.exe)) {
+              Write-Error "编译失败：未找到主程序文件"
+              exit 1
+          }
+          Write-Host "✅ .NET Framework 4.8.1 编译成功！"
+          
+          # 可选：列出编译产物
+          Get-ChildItem ./bin/Release -Recurse
+
+      # 可选：保留打包步骤（如需每次提交生成zip包，可取消注释）
+      # - name: Package build artifacts
+      #   run: |
+      #     New-Item -Path ./release -ItemType Directory -Force
+      #     Copy-Item -Path ./bin/Release/* -Destination ./release -Recurse
+      #     if (Test-Path ./AutoAPKTool/tool) {
+      #         Copy-Item -Path ./AutoAPKTool/tool -Destination ./release/tool -Recurse -Force
+      #     }
+      #     Compress-Archive -Path ./release/* -DestinationPath ./ApkToolBox-Build-${{ github.sha }}.zip -Force
+      
+      # 可选：上传构建产物为Action Artifact（便于下载查看）
+      # - name: Upload build artifacts
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: ApkToolBox-Build-${{ github.sha }}
+      #     path: ./bin/Release/
