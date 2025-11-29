@@ -1,9 +1,10 @@
 name: Build and Release
+permissions:
+  contents: write  
 
 # 普通提交仅编译，Tag 提交编译+发布
 on:
   push:
-    branches: ['*']          # 所有分支提交仅编译
     tags: ['v*']            # 推送 Tag（如 v1.6.1）时编译+发布
   pull_request:
     branches: ['*']
