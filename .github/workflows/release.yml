@@ -20,10 +20,10 @@ jobs:
         uses: NuGet/setup-nuget@v2
 
       - name: Restore NuGet packages
-        run: nuget restore ApkToolBox/AutoAPKTool/AutoAPKTool.csproj  # 直接指定项目文件路径，避免工作目录问题
+        run: nuget restore AutoAPKTool/AutoAPKTool.csproj  # 直接指定项目文件路径，避免工作目录问题
 
       - name: Build project
-        run: msbuild ApkToolBox/AutoAPKTool/AutoAPKTool.csproj /p:Configuration=Release /p:Platform="Any CPU" /p:OutputPath=../../bin/Release
+        run: msbuild AutoAPKTool/AutoAPKTool.csproj /p:Configuration=Release /p:Platform="Any CPU" /p:OutputPath=../../bin/Release
 
       - name: Prepare release artifacts
         run: |
@@ -34,11 +34,11 @@ jobs:
           Copy-Item -Path ./bin/Release/* -Destination ./release -Recurse
           
           # 复制工具目录（处理可能的重复路径）
-          if (Test-Path ./ApkToolBox/AutoAPKTool/tool) {
-              Copy-Item -Path ./ApkToolBox/AutoAPKTool/tool -Destination ./release/tool -Recurse -Force
+          if (Test-Path ./AutoAPKTool/tool) {
+              Copy-Item -Path ./AutoAPKTool/tool -Destination ./release/tool -Recurse -Force
           }
-          if (Test-Path ./ApkToolBox/tool) {
-              Copy-Item -Path ./ApkToolBox/tool -Destination ./release/tool -Recurse -Force
+          if (Test-Path ./tool) {
+              Copy-Item -Path ./tool -Destination ./release/tool -Recurse -Force
           }
           
           # 压缩为 zip 包
