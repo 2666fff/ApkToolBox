@@ -40,7 +40,6 @@ jobs:
             /p:Configuration=Release `
             /p:Platform="Any CPU" `
             /p:OutputPath=${{ github.workspace }}/bin/Release `  # 绝对路径指定输出目录
-            /p:UseLatestPlatformToolset=true
         working-directory: ${{ github.workspace }}
         shell: pwsh
 
