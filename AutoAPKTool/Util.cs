@@ -22,12 +22,12 @@
             return string.Format("-jar "+Constants.ApkFile +" "+ apk);
         }
 
-        public static string Signapk(string keypath, string keyw, string apkpath, string ais)
+        public static string Signapk(string keypath, string keyw, string apkpath, string ais, string _alispass)
         {
             return
                 string.Format(
-                    "-jar " + Constants.ApkSigner + " sign --ks \"{0}\" --ks-key-alias  \"{1}\"  --ks-pass  pass:\"{2}\"  --key-pass pass:\"{3}\"",
-                    keypath, ais, keyw, apkpath);
+                    "-jar " + Constants.ApkSigner + " sign --ks \"{0}\" --ks-key-alias  \"{1}\"  --ks-pass  pass:\"{2}\"  --key-pass pass:\"{3}\"  \"{4}\"",
+                    keypath, ais, keyw,_alispass, apkpath);
         }
 
         public static string DecOdex(string inputOdex, string outputSmali)
@@ -80,5 +80,16 @@
         {
             return string.Format("-jar " + Constants.ApkSigner + " sign --v4-signing-enabled true --ks " + Constants.KeyStore + "  --ks-key-alias artw --ks-pass pass:232425 --key-pass pass:232425 " + apkName);
         }
+        
+        public static string GetManifestOnlyStr(string inputApk, string outputFolderName)
+        {
+            return $"-jar \"{Constants.JarApktool}\" d -s -r \"{inputApk}\" -o \"{outputFolderName}\"";
+        }
+        
+        public static string clearAPKtoolData()
+        {
+            return $"-jar \"{Constants.JarApktool}\" empty-framework-dir";
+        }
+
     }
 }

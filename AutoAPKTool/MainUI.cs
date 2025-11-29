@@ -163,7 +163,7 @@ namespace AutoAPKTool
                 if (saveFileDialog.ShowDialog() != DialogResult.OK) return;
                 var outputFolderName = saveFileDialog.FileName.ToString();
                 string args;
-                if (MessageBox.Show(Resources.DecodeWithoutResource, Resources.info, MessageBoxButtons.OKCancel) !=
+                if (true || MessageBox.Show(Resources.DecodeWithoutResource, Resources.info, MessageBoxButtons.OKCancel) !=
                     DialogResult.OK)
                 {
                     args = Util.GetDecompilerArg(inputApk, outputFolderName);
@@ -348,7 +348,7 @@ namespace AutoAPKTool
                 if (MessageBox.Show(Resources.need_signs, Resources.info, MessageBoxButtons.OKCancel) !=
                     DialogResult.OK)
                     return;
-                var allsign = Util.Signapk(_path, _keyword, text, _alis);
+                var allsign = Util.Signapk(_path, _keyword, text, _alis, _alispass);
                 new Thread(() => { ExcuteSync(ExcuteJava, allsign, true); }).Start();
             }
             else if (!File.Exists(text) || Path.GetExtension(text) != ".apk")
@@ -357,7 +357,7 @@ namespace AutoAPKTool
             }
             else
             {
-                var signapk = Util.Signapk(_path, _keyword, text, _alis);
+                var signapk = Util.Signapk(_path, _keyword, text, _alis, _alispass);
                 new Thread(() => { ExcuteSync(ExcuteJava, signapk, true); }).Start();
             }
         }
@@ -381,6 +381,12 @@ namespace AutoAPKTool
         {
             var f = new CertUI();
             f.Show();
+        }
+        
+        private void 修复工具缓存ToolStripMenuItemClick(object sender, EventArgs e)
+        {
+            new Thread(() => { ExcuteSync(ExcuteJava,             Util.clearAPKtoolData()
+                , true); }).Start();
         }
 
 
@@ -535,7 +541,30 @@ namespace AutoAPKTool
 
         private void OpenSourceUrl_Click(object sender, EventArgs e)
         {
-            Process.Start("https://github.com/Qrilee/ApkToolBox");
+            Process.Start("https://github.com/2666fff/ApkToolBox");
+        }
+
+        private void btnManifestOnlyClick(object sender, EventArgs e)
+        {
+            var inputApk = this.open_path.Text; 
+            if (!File.Exists(inputApk) || Path.GetExtension(inputApk) != ".apk")
+            {
+                MessageBox.Show(Resources.no_find_apk, Resources.info);
+            }
+            else
+            {
+                var saveFileDialog = new SaveFileDialog
+                {
+                    Filter = Resources.files,
+                    InitialDirectory = Path.GetDirectoryName(inputApk),
+                    FileName = Path.GetFileNameWithoutExtension(inputApk)
+                };
+                if (saveFileDialog.ShowDialog() != DialogResult.OK) return;
+                var outputFolderName = saveFileDialog.FileName.ToString();
+                string args = Util.GetManifestOnlyStr(inputApk, outputFolderName);
+                new Thread(() => { ExcuteSync(ExcuteJava, args, true); }).Start();
+            }
+
         }
     }
 }
