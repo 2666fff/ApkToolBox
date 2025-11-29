@@ -27,7 +27,6 @@ jobs:
 
       - name: Restore NuGet packages (适配.NET 4.8.1)
         run: |
-          # 正确的还原命令：通过MSBuild参数指定框架，而非NuGet参数
           msbuild AutoAPKTool/AutoAPKTool.csproj `
             /t:Restore `
             /p:Configuration=Release
@@ -36,29 +35,34 @@ jobs:
 
       - name: Build project (.NET Framework 4.8.1)
         run: |
+          # 统一输出路径到工作目录下的 bin/Release，避免跨目录问题
           msbuild AutoAPKTool/AutoAPKTool.csproj `
             /p:Configuration=Release `
             /p:Platform="Any CPU" `
-            /p:OutputPath=../../bin/Release `
+            /p:OutputPath=${{ github.workspace }}/bin/Release `  # 绝对路径指定输出目录
             /p:UseLatestPlatformToolset=true
         working-directory: ${{ github.workspace }}
         shell: pwsh
 
       - name: Verify build output
         run: |
-          if (-not (Test-Path ./bin/Release/AutoAPKTool.exe)) {
-              Write-Error "编译失败：未找到主程序文件"
+          # 使用绝对路径验证，避免相对路径歧义
+          $exePath = "${{ github.workspace }}/bin/Release/AutoAPKTool.exe"
+          if (-not (Test-Path $exePath)) {
+              Write-Error "编译失败：未找到主程序文件，路径：$exePath"
               exit 1
           }
-          Get-ChildItem ./bin/Release -Recurse
+          Write-Host "✅ .NET Framework 4.8.1 编译成功！主程序路径：$exePath"
+          # 列出编译产物详情
+          Get-ChildItem "${{ github.workspace }}/bin/Release" -Recurse
         working-directory: ${{ github.workspace }}
         shell: pwsh
 
-      # 可选：打包产物（如需保留可取消注释）
+      # 可选：打包产物（路径统一）
       # - name: Package build artifacts
       #   run: |
       #     New-Item -Path ./release -ItemType Directory -Force
-      #     Copy-Item -Path ./bin/Release/* -Destination ./release -Recurse
+      #     Copy-Item -Path "${{ github.workspace }}/bin/Release/*" -Destination ./release -Recurse
       #     if (Test-Path ./AutoAPKTool/tool) {
       #         Copy-Item -Path ./AutoAPKTool/tool -Destination ./release/tool -Recurse -Force
       #     }
@@ -71,4 +75,4 @@ jobs:
       #   uses: actions/upload-artifact@v4
       #   with:
       #     name: ApkToolBox-Build-${{ github.sha }}
-      #     path: ./bin/Release/
+      #     path: ${{ github.workspace }}/bin/Release/
