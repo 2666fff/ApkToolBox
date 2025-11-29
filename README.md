@@ -1,6 +1,6 @@
 # ApkToolBox Android一体式工具箱
-2023/JUN/06
-做做更新 updates
+<img width="888" height="780" alt="image" src="https://github.com/user-attachments/assets/d3a82db9-f7b9-478c-9f8d-a84549cde826" />
+
 
 ##### 主要功能
 * 反编译apk，回编译apk，支持批量
@@ -10,8 +10,6 @@
 * 支持自定义签名
 * 支持app查壳
 * 支持odex反编译
-
-##### 签名工具来自网易，签名速度比一般签名快50%~80%
 
 ###### 更新日志
    移步Release
