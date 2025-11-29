@@ -1,15 +1,11 @@
 name: Build on Every Commit
 
-# 触发条件：所有分支的push提交（移除tag限制）
 on:
   push:
-    branches:
-      - '*'  # 匹配所有分支
-    tags:
-      - '*'  # 兼容tag提交也触发（可选，如需仅分支提交可删除此行）
+    branches: ['*']
+    tags: ['*']
   pull_request:
-    branches:
-      - '*'  # PR提交也触发编译（可选，按需保留）
+    branches: ['*']
 
 jobs:
   build:
@@ -22,7 +18,6 @@ jobs:
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
         with:
-          # 显式指定MSBuild版本（适配.NET Framework 4.8.1）
           msbuild-architecture: x64
 
       - name: Setup NuGet
@@ -30,11 +25,14 @@ jobs:
         with:
           nuget-version: 'latest'
 
-      - name: Restore NuGet packages
+      - name: Restore NuGet packages (适配.NET 4.8.1)
         run: |
-          # 显式指定NuGet还原目标框架为4.8.1
-          nuget restore AutoAPKTool/AutoAPKTool.csproj -Framework net481
+          # 正确的还原命令：通过MSBuild参数指定框架，而非NuGet参数
+          msbuild AutoAPKTool/AutoAPKTool.csproj `
+            /t:Restore `
+            /p:Configuration=Release
         working-directory: ${{ github.workspace }}
+        shell: pwsh
 
       - name: Build project (.NET Framework 4.8.1)
         run: |
@@ -42,24 +40,21 @@ jobs:
             /p:Configuration=Release `
             /p:Platform="Any CPU" `
             /p:OutputPath=../../bin/Release `
-            /p:TargetFrameworkVersion=v4.8.1 `  # 强制指定目标框架
-            /p:TargetFrameworkProfile="" `
-            /p:UseLatestPlatformToolset=true  # 使用最新工具集兼容4.8.1
+            /p:UseLatestPlatformToolset=true
         working-directory: ${{ github.workspace }}
+        shell: pwsh
 
       - name: Verify build output
         run: |
-          # 检查编译产物是否生成
           if (-not (Test-Path ./bin/Release/AutoAPKTool.exe)) {
               Write-Error "编译失败：未找到主程序文件"
               exit 1
           }
-          Write-Host "✅ .NET Framework 4.8.1 编译成功！"
-          
-          # 可选：列出编译产物
           Get-ChildItem ./bin/Release -Recurse
+        working-directory: ${{ github.workspace }}
+        shell: pwsh
 
-      # 可选：保留打包步骤（如需每次提交生成zip包，可取消注释）
+      # 可选：打包产物（如需保留可取消注释）
       # - name: Package build artifacts
       #   run: |
       #     New-Item -Path ./release -ItemType Directory -Force
@@ -68,8 +63,10 @@ jobs:
       #         Copy-Item -Path ./AutoAPKTool/tool -Destination ./release/tool -Recurse -Force
       #     }
       #     Compress-Archive -Path ./release/* -DestinationPath ./ApkToolBox-Build-${{ github.sha }}.zip -Force
-      
-      # 可选：上传构建产物为Action Artifact（便于下载查看）
+      #   working-directory: ${{ github.workspace }}
+      #   shell: pwsh
+
+      # 可选：上传产物到Action Artifacts
       # - name: Upload build artifacts
       #   uses: actions/upload-artifact@v4
       #   with:
