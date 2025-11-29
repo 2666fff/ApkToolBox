@@ -3,43 +3,48 @@ name: Build and Release on Tag
 on:
   push:
     tags:
-      - 'v*'  # 匹配 v 开头的标签，如 v1.0.0、v2.3.1 等
+      - 'v*'
 
 jobs:
   build:
-    runs-on: windows-latest  # 保持 Windows 环境，因为是 .NET Framework 应用
+    runs-on: windows-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup .NET Framework 4.0 构建工具
-        uses: microsoft/setup-msbuild@v2  # 使用专门的 MSBuild 安装工具
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
 
-      - name: 安装 NuGet 工具
+      - name: Setup NuGet
         uses: NuGet/setup-nuget@v2
 
-      - name: 还原 NuGet 包
-        working-directory: ./ApkToolBox/AutoAPKTool
-        run: nuget restore
+      - name: Restore NuGet packages
+        run: nuget restore ApkToolBox/AutoAPKTool/AutoAPKTool.csproj  # 直接指定项目文件路径，避免工作目录问题
 
-      - name: 构建项目
-        working-directory: ./ApkToolBox/AutoAPKTool
-        run: |
-          msbuild AutoAPKTool.csproj /p:Configuration=Release /p:Platform="Any CPU" /p:OutputPath=../bin/Release
+      - name: Build project
+        run: msbuild ApkToolBox/AutoAPKTool/AutoAPKTool.csproj /p:Configuration=Release /p:Platform="Any CPU" /p:OutputPath=../../bin/Release
 
-      - name: 准备发布文件
+      - name: Prepare release artifacts
         run: |
           # 创建发布目录
-          New-Item -Path ./release -ItemType Directory
-          # 复制编译输出文件
-          Copy-Item -Path ./ApkToolBox/bin/Release/* -Destination ./release -Recurse
-          # 复制工具目录（包含 jadx、dex2jar 等）
-          Copy-Item -Path ./ApkToolBox/tool -Destination ./release/tool -Recurse
+          New-Item -Path ./release -ItemType Directory -Force
+          
+          # 复制编译输出文件（修正路径）
+          Copy-Item -Path ./bin/Release/* -Destination ./release -Recurse
+          
+          # 复制工具目录（处理可能的重复路径）
+          if (Test-Path ./ApkToolBox/AutoAPKTool/tool) {
+              Copy-Item -Path ./ApkToolBox/AutoAPKTool/tool -Destination ./release/tool -Recurse -Force
+          }
+          if (Test-Path ./ApkToolBox/tool) {
+              Copy-Item -Path ./ApkToolBox/tool -Destination ./release/tool -Recurse -Force
+          }
+          
           # 压缩为 zip 包
-          Compress-Archive -Path ./release/* -DestinationPath ./ApkToolBox-${{ github.ref_name }}.zip
+          Compress-Archive -Path ./release/* -DestinationPath ./ApkToolBox-${{ github.ref_name }}.zip -Force
 
-      - name: 创建 GitHub Release
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: ./ApkToolBox-${{ github.ref_name }}.zip
