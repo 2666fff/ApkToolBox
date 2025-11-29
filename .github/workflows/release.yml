@@ -1,16 +1,16 @@
-name: Build on Every Commit
+name: Build and Release
 
+# 普通提交仅编译，Tag 提交编译+发布
 on:
   push:
-    branches: ['*']
-    tags: ['*']
+    branches: ['*']          # 所有分支提交仅编译
+    tags: ['v*']            # 推送 Tag（如 v1.6.1）时编译+发布
   pull_request:
     branches: ['*']
 
 jobs:
   build:
     runs-on: windows-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -22,10 +22,8 @@ jobs:
 
       - name: Setup NuGet
         uses: NuGet/setup-nuget@v2
-        with:
-          nuget-version: 'latest'
 
-      - name: Restore NuGet packages (适配.NET 4.8.1)
+      - name: Restore NuGet packages
         run: |
           msbuild AutoAPKTool/AutoAPKTool.csproj `
             /t:Restore `
@@ -33,45 +31,51 @@ jobs:
         working-directory: ${{ github.workspace }}
         shell: pwsh
 
-      - name: Build project (.NET Framework 4.8.1)
+      - name: Build project (.NET 4.8.1)
         run: |
-          # 统一输出路径到工作目录下的 bin/Release，避免跨目录问题
           msbuild AutoAPKTool/AutoAPKTool.csproj `
             /p:Configuration=Release `
             /p:Platform="Any CPU" `
-            /p:OutputPath=${{ github.workspace }}/bin/Release `  # 绝对路径指定输出目录
+            /p:OutputPath=${{ github.workspace }}/bin/Release `
         working-directory: ${{ github.workspace }}
         shell: pwsh
 
-      - name: Verify build output
+      - name: Verify build
         run: |
-          # 使用绝对路径验证，避免相对路径歧义
           $exePath = "${{ github.workspace }}/bin/Release/AutoAPKTool.exe"
           if (-not (Test-Path $exePath)) {
-              Write-Error "编译失败：未找到主程序文件，路径：$exePath"
+              Write-Error "编译失败：未找到 $exePath"
               exit 1
           }
-          Write-Host "✅ .NET Framework 4.8.1 编译成功！主程序路径：$exePath"
-          # 列出编译产物详情
-          Get-ChildItem "${{ github.workspace }}/bin/Release" -Recurse
+          Write-Host "✅ 编译成功！"
         working-directory: ${{ github.workspace }}
         shell: pwsh
 
-      # 可选：打包产物（路径统一）
-      # - name: Package build artifacts
-      #   run: |
-      #     New-Item -Path ./release -ItemType Directory -Force
-      #     Copy-Item -Path "${{ github.workspace }}/bin/Release/*" -Destination ./release -Recurse
-      #     if (Test-Path ./AutoAPKTool/tool) {
-      #         Copy-Item -Path ./AutoAPKTool/tool -Destination ./release/tool -Recurse -Force
-      #     }
-      #     Compress-Archive -Path ./release/* -DestinationPath ./ApkToolBox-Build-${{ github.sha }}.zip -Force
-      #   working-directory: ${{ github.workspace }}
-      #   shell: pwsh
+      - name: Package artifacts
+        run: |
+          New-Item -Path ./release -ItemType Directory -Force
+          Copy-Item -Path ${{ github.workspace }}/bin/Release/* -Destination ./release -Recurse
+          if (Test-Path ./AutoAPKTool/tool) {
+              Copy-Item -Path ./AutoAPKTool/tool -Destination ./release/tool -Recurse -Force
+          }
+          Compress-Archive -Path ./release/* -DestinationPath ./ApkToolBox-${{ github.ref_name }}.zip -Force
+        working-directory: ${{ github.workspace }}
+        shell: pwsh
 
-      # 可选：上传产物到Action Artifacts
-      # - name: Upload build artifacts
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: ApkToolBox-Build-${{ github.sha }}
-      #     path: ${{ github.workspace }}/bin/Release/
+      # 关键：仅当推送 Tag 时，才创建 Release 并上传产物
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')  # 仅 Tag 触发此步骤
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ./ApkToolBox-${{ github.ref_name }}.zip
+          name: Release ${{ github.ref_name }}
+          body: |
+            ## 更新内容
+            - 自动发布版本 ${{ github.ref_name }}
+            - 基于 .NET Framework 4.8.1 编译
+            
+            ## 注意事项
+            - 避免中文路径，防止编译/签名失败
+            - 网易签名工具，速度提升 50%~80%
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # 无需手动配置，GitHub 自动生成
