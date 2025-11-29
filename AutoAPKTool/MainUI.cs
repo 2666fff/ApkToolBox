@@ -418,37 +418,38 @@ namespace AutoAPKTool
 
         private void Btn_CheckProtect(object sender, EventArgs e)
         {
-            var text = this.open_path.Text;
-
-            if (!File.Exists(text) || Path.GetExtension(text) != ".apk")
-            {
-                MessageBox.Show(Resources.no_find_apk, Resources.info);
-                return;
-            }
-
-            //var cmd = Util.GetPackage(text);
-            const string sel = @"classes.dex";
-
-            new Thread(() =>
-            {
-                var zip = new ZipFile(text);
-                var file = zip.SelectEntries(sel, @"\");
-
-                if (file.Count <= 0) return;
-                //这个文件存在！
-                Stream decompressedStream = new MemoryStream();
-                //解压文件 也可以直接使用上面的 file 来操作
-                zip[sel].Extract(decompressedStream);
-                decompressedStream.Position = 0;
-                var reader = new StreamReader(decompressedStream);
-                var dex = reader.ReadToEnd();
-                MessageBox.Show(CheckProtect.checkProtect(dex), Resources.info);
-            }).Start();
+            MessageBox.Show("待开发");
+            // var text = this.open_path.Text;
+            //
+            // if (!File.Exists(text) || Path.GetExtension(text) != ".apk")
+            // {
+            //     MessageBox.Show(Resources.no_find_apk, Resources.info);
+            //     return;
+            // }
+            //
+            // //var cmd = Util.GetPackage(text);
+            // const string sel = @"classes.dex";
+            //
+            // new Thread(() =>
+            // {
+            //     var zip = new ZipFile(text);
+            //     var file = zip.SelectEntries(sel, @"\");
+            //
+            //     if (file.Count <= 0) return;
+            //     //这个文件存在！
+            //     Stream decompressedStream = new MemoryStream();
+            //     //解压文件 也可以直接使用上面的 file 来操作
+            //     zip[sel].Extract(decompressedStream);
+            //     decompressedStream.Position = 0;
+            //     var reader = new StreamReader(decompressedStream);
+            //     var dex = reader.ReadToEnd();
+            //     MessageBox.Show(CheckProtect.checkProtect(dex), Resources.info);
+            // }).Start();
         }
 
         private void Btn_BlogClick(object sender, EventArgs e)
         {
-            Process.Start("http://qtfreet.com/");
+            MessageBox.Show("没有");
         }
 
         private void Btn_52pojieClick(object sender, EventArgs e)
