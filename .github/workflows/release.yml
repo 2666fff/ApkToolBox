@@ -7,27 +7,28 @@ on:
 
 jobs:
   build:
-    runs-on: windows-latest  # 由于项目是 .NET Framework 4.0 应用，使用 Windows 环境
+    runs-on: windows-latest  # 保持 Windows 环境，因为是 .NET Framework 应用
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup .NET Framework
-        uses: microsoft/setup-dotnet@v4
-        with:
-          dotnet-version: '4.0.x'  # 匹配项目使用的 .NET Framework 版本
+      - name: Setup .NET Framework 4.0 构建工具
+        uses: microsoft/setup-msbuild@v2  # 使用专门的 MSBuild 安装工具
 
-      - name: Restore NuGet packages
+      - name: 安装 NuGet 工具
+        uses: NuGet/setup-nuget@v2
+
+      - name: 还原 NuGet 包
         working-directory: ./ApkToolBox/AutoAPKTool
         run: nuget restore
 
-      - name: Build project
+      - name: 构建项目
         working-directory: ./ApkToolBox/AutoAPKTool
         run: |
           msbuild AutoAPKTool.csproj /p:Configuration=Release /p:Platform="Any CPU" /p:OutputPath=../bin/Release
 
-      - name: Prepare release artifacts
+      - name: 准备发布文件
         run: |
           # 创建发布目录
           New-Item -Path ./release -ItemType Directory
@@ -38,7 +39,7 @@ jobs:
           # 压缩为 zip 包
           Compress-Archive -Path ./release/* -DestinationPath ./ApkToolBox-${{ github.ref_name }}.zip
 
-      - name: Create GitHub Release
+      - name: 创建 GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: ./ApkToolBox-${{ github.ref_name }}.zip
